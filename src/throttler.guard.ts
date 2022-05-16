@@ -3,7 +3,12 @@ import { Reflector } from '@nestjs/core';
 import * as md5 from 'md5';
 import { ThrottlerModuleOptions } from './throttler-module-options.interface';
 import { ThrottlerStorage } from './throttler-storage.interface';
-import { THROTTLER_LIMIT, THROTTLER_SKIP, THROTTLER_TTL } from './throttler.constants';
+import {
+  THROTTLER_LIMIT,
+  THROTTLER_SKIP,
+  THROTTLER_TTL,
+  THROTTLER_GET_TRACKER,
+} from './throttler.constants';
 import { InjectThrottlerOptions, InjectThrottlerStorage } from './throttler.decorator';
 import { ThrottlerException, throttlerMessage } from './throttler.exception';
 
@@ -43,11 +48,17 @@ export class ThrottlerGuard implements CanActivate {
       handler,
       classRef,
     ]);
+    const getTracker =
+      this.reflector.getAllAndOverride<(req: Record<string, any>) => string>(
+        THROTTLER_GET_TRACKER,
+        [handler, classRef],
+      ) ?? this.getTracker;
 
     // Check if specific limits are set at class or route level, otherwise use global options.
     const limit = routeOrClassLimit || this.options.limit;
     const ttl = routeOrClassTtl || this.options.ttl;
-    return this.handleRequest(context, limit, ttl);
+
+    return this.handleRequest(context, limit, ttl, getTracker);
   }
 
   /**
@@ -60,6 +71,7 @@ export class ThrottlerGuard implements CanActivate {
     context: ExecutionContext,
     limit: number,
     ttl: number,
+    getTracker: (req: Record<string, any>) => string,
   ): Promise<boolean> {
     // Here we start to check the amount of requests being done against the ttl.
     const { req, res } = this.getRequestResponse(context);
@@ -72,7 +84,7 @@ export class ThrottlerGuard implements CanActivate {
         }
       }
     }
-    const tracker = this.getTracker(req);
+    const tracker = getTracker(req);
     const key = this.generateKey(context, tracker);
     const ttls = await this.storageService.getRecord(key);
     const nearestExpiryTime = ttls.length > 0 ? Math.ceil((ttls[0] - Date.now()) / 1000) : 0;

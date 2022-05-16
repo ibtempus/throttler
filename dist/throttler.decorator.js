@@ -8,17 +8,18 @@ exports.InjectThrottlerStorage =
 const common_1 = require('@nestjs/common');
 const throttler_constants_1 = require('./throttler.constants');
 const throttler_providers_1 = require('./throttler.providers');
-function setThrottlerMetadata(target, limit, ttl) {
+function setThrottlerMetadata(target, limit, ttl, getTracker) {
   Reflect.defineMetadata(throttler_constants_1.THROTTLER_TTL, ttl, target);
   Reflect.defineMetadata(throttler_constants_1.THROTTLER_LIMIT, limit, target);
+  Reflect.defineMedadata(throttler_constants_1.THROTTLER_GET_TRACKER, getTracker, target);
 }
-const Throttle = (limit = 20, ttl = 60) => {
+const Throttle = (limit = 20, ttl = 60, getTracker = undefined) => {
   return (target, propertyKey, descriptor) => {
     if (descriptor) {
-      setThrottlerMetadata(descriptor.value, limit, ttl);
+      setThrottlerMetadata(descriptor.value, limit, ttl, getTracker);
       return descriptor;
     }
-    setThrottlerMetadata(target, limit, ttl);
+    setThrottlerMetadata(target, limit, ttl, getTracker);
     return target;
   };
 };

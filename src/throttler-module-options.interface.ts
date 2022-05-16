@@ -17,6 +17,11 @@ export interface ThrottlerModuleOptions {
   ignoreUserAgents?: RegExp[];
 
   /**
+   * The method for getting the tracker
+   */
+  getTracker?: (req: Record<string, any>) => string;
+
+  /**
    * The storage class to use where all the record will be stored in.
    */
   storage?: any;
